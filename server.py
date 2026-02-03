@@ -35,16 +35,16 @@ async def handle_message(websocket, data):
                 "user": sender,
             }))
 
-async def handle_send_message_to_others(websocket, data):
-    text = data.get("text")
-    user = data.get("user")
-    for user, websocket in users.items():
-        if user != data.get("user"):
-            await websocket.send(json.dumps({
-                "action": "message",
-                "text": text,
-                "sender": data.get("user"),
-            }))
+# async def handle_send_message_to_others(websocket, data):
+#     text = data.get("text")
+#     user = data.get("user")
+#     for user, websocket in users.items():
+#         if user != data.get("user"):
+#             await websocket.send(json.dumps({
+#                 "action": "message",
+#                 "text": text,
+#                 "sender": data.get("user"),
+#             }))
 
 ROUTES = {
     "join": handle_join,
