@@ -60,7 +60,10 @@ async def send_messages(websocket, user_name, state):
                 state["buffer"] = "".join(current_message)
                 state["typing"] = True
                 # Echo the character to screen
-                print(char, end="", flush=True)
+                if char == " ":
+                    print(" ", end="", flush=True)
+                else:
+                    print(char, end="", flush=True) 
                 
                 # Send typing indicator asynchronously (with debouncing)
                 current_time = time.time()
@@ -118,14 +121,15 @@ async def receive_messages(websocket, user_name, state):
                 print(f"\r\033[K{sender} is typing...", end="", flush=True)
                 await asyncio.sleep(1)  # Show for 1 second
                 current_text = state.get("buffer", "")
-                print(f"\n[{user_name}]: {current_text}", end="", flush=True)
+                print(f"\r\033[K[{user_name}]: {current_text}", end="", flush=True)
                 
         elif action == "message":
             sender = data.get("user")
             text = data.get("text")
             if sender != user_name:
                 print(f"\r\033[K[{sender}]: {text}")
-                print(f"[{user_name}]: ", end="", flush=True)
+                current_text = state.get("buffer", "")
+                print(f"[{user_name}]: {current_text}", end="", flush=True)
 
 async def main():
     user_name = input("Enter your name: ")
