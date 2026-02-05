@@ -11,7 +11,13 @@ users = {}
 async def handle_typing(websocket, data):
     user = data.get("user")
     logging.info(f"{user} is typing...")
-    # await websocket.send(json.dumps({"action": "typing", "user": user}))
+    # Broadcast typing indicator to all OTHER users
+    for other_user, ws in users.items():
+        if other_user != user:
+            await ws.send(json.dumps({
+                "action": "typing",
+                "user": user
+            }))
 
 async def handle_join(websocket, data):
     user = data.get("user")
