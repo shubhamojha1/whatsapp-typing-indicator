@@ -73,9 +73,16 @@ async def handler(websocket):
             await websocket.send(json.dumps({"error": "Invalid JSON"}))
             
 async def main():
+    # async with serve(handler, "0.0.0.0", 8765) as server: # listen on all interfaces
     async with serve(handler, "localhost", 8765) as server:
         await server.serve_forever()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# To allow incoming connections over TCP on port 8765
+# For windows:
+# Firewall -> inbound rules -> new rule -> Port 8765 TCP
+# MacOS/Linux: 
+# ufw allow 8765

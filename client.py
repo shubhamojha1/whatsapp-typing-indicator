@@ -136,6 +136,8 @@ async def main():
     state = {"buffer": "", "typing": False} # Global state to track the current message and typing status
 
     # One connection that stays open
+    # server_host = input("Server address (or press Enter for localhost): ").strip() or "localhost"
+    # async with connect(f"ws://{server_host}:8765") as websocket:
     async with connect("ws://localhost:8765") as websocket:
         await asyncio.gather(
             send_messages(websocket, user_name, state),
