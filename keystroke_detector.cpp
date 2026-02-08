@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cstdio>
 
 #ifdef _WIN32
     // Windows-specific headers
@@ -24,6 +25,7 @@
     #include <termios.h>
     #include <unistd.h>
     #include <fcntl.h>
+    // #include <csignal>
 #endif
 
 // Disable output buffering for real-time communication
@@ -34,6 +36,18 @@ void disable_buffering() {
 
 #ifdef _WIN32
 // ============ WINDOWS IMPLEMENTATION ============
+
+// static HANDLE g_hStdin = INVALID_HANDLE_VALUE;
+// static DWORD g_originalMode = 0;
+
+// static BOOL WINAPI console_ctrl_handler(DWORD ctrl_type){
+//     if(ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_BREAK_EVENT) {
+//         if (g_hStdin != INVALID_HANDLE_VALUE && g_originalMode != 0) {
+//             SetConsoleMode(g_hStdin, g_originalMode);
+//         }
+//     }
+//     return FALSE;
+// }
 
 int get_char() {
     if (_kbhit()) {
@@ -59,7 +73,10 @@ void run_detector() {
             std::cout << "ENTER" << std::endl;
         } else if (ch == 8 || ch == 127) {  // Backspace
             std::cout << "BACKSPACE" << std::endl;
-        } else if (ch >= 32 && ch <= 126) {  // Printable ASCII
+        } else if(ch == 32) {
+            std::cout << "SPACE" << std::endl;
+        }
+         else if (ch >= 32 && ch <= 126) {  // Printable ASCII
             std::cout << "KEY:" << static_cast<char>(ch) << std::endl;
         }
         // Ignore other special keys (arrows, function keys, etc.)
@@ -116,7 +133,7 @@ void run_detector() {
         } else if (ch == 127 || ch == 8) {  // Backspace
             std::cout << "BACKSPACE" << std::endl;
         } else if (ch >= 32 && ch <= 126) {  // Printable ASCII
-            std::cout << "KEY:" << static_cast<char>(ch) << std::endl;
+            std::cout << "KEY**:" << static_cast<char>(ch) << std::endl;
         }
         // Ignore escape sequences (arrow keys, etc.) for simplicity
     }
@@ -125,6 +142,7 @@ void run_detector() {
 #endif
 
 int main() {
+    std::cout << "=== NEW BUILD ===\n";
     disable_buffering();
     run_detector();
     return 0;

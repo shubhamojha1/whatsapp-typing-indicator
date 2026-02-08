@@ -52,18 +52,24 @@ async def send_messages(websocket, user_name, state):
                 break
             
             line = line.decode().strip()
+
+            if line.startswith("SPACE"):
+                # print("SPACE")
+                if current_message:
+                    current_message.append(" ")
+                    state["buffer"] = "".join(current_message)
+                    state["typing"] = True
+                    print(" ", end="", flush=True)
             
-            if line.startswith("KEY:"):
+            elif line.startswith("KEY:"):
                 # Regular key pressed - add to message buffer
                 char = line[4:]  # Get character after "KEY:"
                 current_message.append(char)
+                # print("current_message before join -> (", current_message, ")")
                 state["buffer"] = "".join(current_message)
                 state["typing"] = True
                 # Echo the character to screen
-                if char == " ":
-                    print(" ", end="", flush=True)
-                else:
-                    print(char, end="", flush=True) 
+                print(char, end="", flush=True) 
                 
                 # Send typing indicator asynchronously (with debouncing)
                 current_time = time.time()
