@@ -44,7 +44,7 @@ async def handle_message(websocket, data):
     sender = data.get("user")
     logging.info(f"Message received: {text}")
     message_type = data.get("message_type")
-    if message_type == "regular" or message_type == "joining":
+    if message_type == "regular" or message_type == "joining" or message_type == "exit":
         for user, websocket in users.items():
                 if user != sender:
                     await websocket.send(json.dumps({
@@ -66,6 +66,10 @@ async def handle_exit(websocket, data):
     del users[user]
     logging.info(f"{user} exited.")
     logging.info(users)
+    await websocket.send(json.dumps({
+        "action": "exit",
+        "user": user,
+    }))
     await websocket.close(code=1000, reason = "Client Exit")
 
 ROUTES = {

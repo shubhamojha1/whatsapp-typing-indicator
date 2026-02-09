@@ -113,7 +113,8 @@ async def send_messages(websocket, user_name, state):
                     print("\b \b", end="", flush=True)
                     
             elif line == "EXIT":
-                # Ctrl+C or EOF detected - exit       
+                # Ctrl+C or EOF detected - exit
+                
                 break
     finally:
         if proc.returncode is None:
@@ -140,17 +141,17 @@ async def receive_messages(websocket, user_name, state):
         elif action == "message":
             sender = data.get("user")
             text = data.get("text")
-            # message_type = data.get("message_type")
+            message_type = data.get("message_type")
             # print("MESSAGE TYPE -> ", message_type)
-            # # try:
-            # if message_type == "duplicate_user_error":
-            #     print(f"User {sender} already exists!")
-            #     await websocket.send(json.dumps({
-            #         "action": "exit",
-            #         "user": sender,
-            #         "text": text
-            #     }))
-            #     raise SystemExit(1)
+            # try:
+            if message_type == "duplicate_user_error":
+                print(f"User {sender} already exists!")
+                await websocket.send(json.dumps({
+                    "action": "exit",
+                    "user": sender,
+                    "text": text
+                }))
+                raise SystemExit(1)
             # except SystemExit:
             #     print("Please launch client again!")
 
@@ -159,26 +160,36 @@ async def receive_messages(websocket, user_name, state):
                 current_text = state.get("buffer", "")
                 print(f"[{user_name}]: {current_text}", end="", flush=True)
         
-        # elif action == "join":
-        #     sender = data.get("user")
-        #     # print()
-        #     # message_type = data.get("message_type")
-        #     # if message_type == "duplicate_user_error":
-        #     #     message_text = f"\r\033[K[ User {sender} already exists! ]"
-        #     #     await websocket.send(json.dumps({
-        #     #         "action": "message",
-        #     #         "user": sender,
-        #     #         "text": message_text,
-        #     #         "message_type": "duplicate_user_error"
-        #     #     }))
+        elif action == "join":
+            sender = data.get("user")
+            # print()
+            # message_type = data.get("message_type")
+            # if message_type == "duplicate_user_error":
+            #     message_text = f"\r\033[K[ User {sender} already exists! ]"
+            #     await websocket.send(json.dumps({
+            #         "action": "message",
+            #         "user": sender,
+            #         "text": message_text,
+            #         "message_type": "duplicate_user_error"
+            #     }))
 
-        #     message_text = f"\r\033[K[ User {sender} joined! ]"
-        #     await websocket.send(json.dumps({
-        #                 "action": "message",
-        #                 "user": user_name,
-        #                 "text": message_text,
-        #                 "message_type": "joining"
-        #             }))
+            message_text = f"\r\033[K[ User {sender} joined! ]"
+            await websocket.send(json.dumps({
+                        "action": "message",
+                        "user": user_name,
+                        "text": message_text,
+                        "message_type": "joining"
+                    }))
+            
+        elif action == "exit":
+            sender = data.get("user")
+            message_text = f"\r\033[K[ User {sender} left! ]"
+            await websocket.send(json.dumps({
+                        "action": "message",
+                        "user": user_name,
+                        "text": message_text,
+                        "message_type": "exit"
+            }))
 
 
 async def main():
