@@ -51,21 +51,21 @@ async def send_messages(websocket, user_name, state):
             if not line:
                 break
             
-            line = line.decode().strip()
+            line = line.decode().rstrip('\n')
 
-            if line.startswith("SPACE"):
-                # print("SPACE")
-                if current_message:
-                    current_message.append(" ")
-                    state["buffer"] = "".join(current_message)
-                    state["typing"] = True
-                    print(" ", end="", flush=True)
+            # if line.startswith("SPACE"):
+            #     if current_message:
+            #         current_message.append("-")
+            #         state["buffer"] = "".join(current_message)
+            #         state["typing"] = True
+            #         print(" ", end="", flush=True)
             
-            elif line.startswith("KEY:"):
+            if line.startswith("KEY:"):
                 # Regular key pressed - add to message buffer
                 char = line[4:]  # Get character after "KEY:"
+                if char == "":
+                    continue
                 current_message.append(char)
-                # print("current_message before join -> (", current_message, ")")
                 state["buffer"] = "".join(current_message)
                 state["typing"] = True
                 # Echo the character to screen
@@ -84,11 +84,19 @@ async def send_messages(websocket, user_name, state):
                 # Enter pressed - send the complete message
                 print()  # New line after Enter
                 message_text = "".join(current_message)
-                if message_text:  # Only send non-empty messages
+                if message_text == "/exit":
+                    await websocket.send(json.dumps({
+                        "action": "exit",
+                        "user": user_name,
+                        "text": message_text
+                    }))
+                    break
+                elif message_text:  # Only send non-empty messages
                     await websocket.send(json.dumps({
                         "action": "message",
                         "user": user_name,
-                        "text": message_text
+                        "text": message_text,
+                        "message_type": "regular"
                     }))
                 current_message = []  # Reset for next message
                 state["buffer"] = ""
@@ -105,7 +113,7 @@ async def send_messages(websocket, user_name, state):
                     print("\b \b", end="", flush=True)
                     
             elif line == "EXIT":
-                # Ctrl+C or EOF detected - exit
+                # Ctrl+C or EOF detected - exit       
                 break
     finally:
         if proc.returncode is None:
@@ -132,10 +140,46 @@ async def receive_messages(websocket, user_name, state):
         elif action == "message":
             sender = data.get("user")
             text = data.get("text")
+            # message_type = data.get("message_type")
+            # print("MESSAGE TYPE -> ", message_type)
+            # # try:
+            # if message_type == "duplicate_user_error":
+            #     print(f"User {sender} already exists!")
+            #     await websocket.send(json.dumps({
+            #         "action": "exit",
+            #         "user": sender,
+            #         "text": text
+            #     }))
+            #     raise SystemExit(1)
+            # except SystemExit:
+            #     print("Please launch client again!")
+
             if sender != user_name:
                 print(f"\r\033[K[{sender}]: {text}")
                 current_text = state.get("buffer", "")
                 print(f"[{user_name}]: {current_text}", end="", flush=True)
+        
+        # elif action == "join":
+        #     sender = data.get("user")
+        #     # print()
+        #     # message_type = data.get("message_type")
+        #     # if message_type == "duplicate_user_error":
+        #     #     message_text = f"\r\033[K[ User {sender} already exists! ]"
+        #     #     await websocket.send(json.dumps({
+        #     #         "action": "message",
+        #     #         "user": sender,
+        #     #         "text": message_text,
+        #     #         "message_type": "duplicate_user_error"
+        #     #     }))
+
+        #     message_text = f"\r\033[K[ User {sender} joined! ]"
+        #     await websocket.send(json.dumps({
+        #                 "action": "message",
+        #                 "user": user_name,
+        #                 "text": message_text,
+        #                 "message_type": "joining"
+        #             }))
+
 
 async def main():
     user_name = input("Enter your name: ")
@@ -151,4 +195,7 @@ async def main():
         )
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except SystemExit:
+        pass

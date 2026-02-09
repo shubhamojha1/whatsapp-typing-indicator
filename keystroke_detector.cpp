@@ -40,8 +40,8 @@ void disable_buffering() {
 // static HANDLE g_hStdin = INVALID_HANDLE_VALUE;
 // static DWORD g_originalMode = 0;
 
-// static BOOL WINAPI console_ctrl_handler(DWORD ctrl_type){
-//     if(ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_BREAK_EVENT) {
+// static BOOL WINAPI console_ctrl_handler(DWORD ctrl_type) {
+//     if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_BREAK_EVENT) {
 //         if (g_hStdin != INVALID_HANDLE_VALUE && g_originalMode != 0) {
 //             SetConsoleMode(g_hStdin, g_originalMode);
 //         }
@@ -57,6 +57,12 @@ int get_char() {
 }
 
 void run_detector() {
+    // g_hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    // if (g_hStdin != INVALID_HANDLE_VALUE) {
+    //     GetConsoleMode(g_hStdin, &g_originalMode);
+    //     SetConsoleCtrlHandler(console_ctrl_handler, TRUE);
+    // }
+
     while (true) {
         int ch = get_char();
         
@@ -67,6 +73,9 @@ void run_detector() {
         }
         
         if (ch == 3) {  // Ctrl+C
+            // if (g_hStdin != INVALID_HANDLE_VALUE && g_originalMode != 0) {
+            //     SetConsoleMode(g_hStdin, g_originalMode);
+            // }
             std::cout << "EXIT" << std::endl;
             break;
         } else if (ch == 13 || ch == 10) {  // Enter
@@ -81,6 +90,9 @@ void run_detector() {
         }
         // Ignore other special keys (arrows, function keys, etc.)
     }
+    // if (g_hStdin != INVALID_HANDLE_VALUE) {
+    //     SetConsoleCtrlHandler(console_ctrl_handler, FALSE);
+    // }
 }
 
 #else
