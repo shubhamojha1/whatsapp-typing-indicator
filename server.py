@@ -72,11 +72,21 @@ async def handle_exit(websocket, data):
     }))
     await websocket.close(code=1000, reason = "Client Exit")
 
+async def handle_list_users(websocket, data):
+    sender = data.get("user")
+    users_list = [key for key, _ in users.items() if key != sender]
+    await websocket.send(json.dumps({
+        "action": "list_users",
+        "users_list": users_list,
+    }))
+
+
 ROUTES = {
     "join": handle_join,
     "message": handle_message,
     "typing": handle_typing,
-    "exit": handle_exit
+    "exit": handle_exit,
+    "list_users": handle_list_users
     # "send_message_to_others": handle_send_message_to_others,
 }
 

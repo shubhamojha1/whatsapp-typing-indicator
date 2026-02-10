@@ -91,6 +91,11 @@ async def send_messages(websocket, user_name, state):
                         "text": message_text
                     }))
                     break
+                elif message_text == "/users":
+                    await websocket.send(json.dumps({
+                        "action": "list_users",
+                        "user": user_name
+                    }))
                 elif message_text:  # Only send non-empty messages
                     await websocket.send(json.dumps({
                         "action": "message",
@@ -190,6 +195,11 @@ async def receive_messages(websocket, user_name, state):
                         "text": message_text,
                         "message_type": "exit"
             }))
+        
+        elif action == "list_users":
+            users_list = data.get("users_list")
+            print(users_list)
+
 
 
 async def main():
