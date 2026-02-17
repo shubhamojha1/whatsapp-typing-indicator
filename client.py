@@ -84,6 +84,8 @@ async def send_messages(websocket, user_name, state):
                 # Enter pressed - send the complete message
                 print()  # New line after Enter
                 message_text = "".join(current_message)
+                print("current_message --> ", current_message)
+                print("message_text -->", message_text.split())
                 if message_text == "/exit":
                     await websocket.send(json.dumps({
                         "action": "exit",
@@ -96,6 +98,20 @@ async def send_messages(websocket, user_name, state):
                         "action": "list_users",
                         "user": user_name
                     }))
+                elif message_text.startswith("/dm "):
+                    parts = message_text.split()
+                    if len(parts) >= 3:
+                        receiver = parts[1].lstrip("@")
+                        message = " ".join(parts[2:])
+                        print(f"dm to {receiver}: {message}")
+                        await websocket.send(json.dumps({
+                            "action": "direct_message",
+                            "user": user_name,
+                            "receiver": receiver,
+                            "message": message
+                        }))
+                    else:
+                        print("Usage: /dm @username message")
                 elif message_text:  # Only send non-empty messages
                     await websocket.send(json.dumps({
                         "action": "message",
@@ -149,6 +165,7 @@ async def receive_messages(websocket, user_name, state):
             message_type = data.get("message_type")
             # print("MESSAGE TYPE -> ", message_type)
             # try:
+            print("INSIDE MESSAGE")
             if message_type == "duplicate_user_error":
                 print(f"User {sender} already exists!")
                 await websocket.send(json.dumps({
@@ -158,7 +175,9 @@ async def receive_messages(websocket, user_name, state):
                 }))
                 raise SystemExit(1)
             # except SystemExit:
-            #     print("Please launch client again!")
+            #     print("Please launch client again!")s
+            elif message_type == "direct_message" and data.get("receiver") == user_name:
+                print(f"\r\033[K[DM] [{sender}]: {text}")
 
             if sender != user_name:
                 print(f"\r\033[K[{sender}]: {text}")
@@ -200,6 +219,12 @@ async def receive_messages(websocket, user_name, state):
             users_list = data.get("users_list")
             print(users_list)
 
+        elif action == "direct_message":
+            sender = data.get("user")
+            receiver = data.get("receiver")
+            message = data.get("message")
+            if receiver == user_name:
+                print(f"\r\033[K[{sender}]: [DM] {message}")
 
 
 async def main():

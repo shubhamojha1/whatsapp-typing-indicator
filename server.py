@@ -80,13 +80,36 @@ async def handle_list_users(websocket, data):
         "users_list": users_list,
     }))
 
+async def handle_direct_message(websocket, data):
+    sender = data.get("user")
+    receiver = data.get("receiver")
+    message = data.get("message")
+
+    if receiver in users:
+        receiver_ws = users[receiver]
+        await receiver_ws.send(json.dumps({
+            "action": "message",
+            "user": sender,
+            "receiver": receiver,
+            "text": message,
+            "message_type": "direct_message"
+        }))
+    else:
+        await websocket.send(json.dumps({
+            "action": "message",
+            "user": "system",
+            "text": f"User '{receiver}' not found.",
+            "message_type": "regular"
+        }))
+
 
 ROUTES = {
     "join": handle_join,
     "message": handle_message,
     "typing": handle_typing,
     "exit": handle_exit,
-    "list_users": handle_list_users
+    "list_users": handle_list_users,
+    "direct_message": handle_direct_message
     # "send_message_to_others": handle_send_message_to_others,
 }
 
