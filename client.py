@@ -4,20 +4,11 @@ import asyncio
 from websockets.asyncio.client import connect
 import json
 import sys
-import subprocess
+# import subprocess
 import time
-import os
+# import os
 
-# Cursor region agent log
-# LOG_PATH = r"c:\Users\subha\Projects\blog_projects\whatsapp-typing-indicator\.cursor\debug.log"
-# def log_debug(session_id, run_id, hypothesis_id, location, message, data):
-#     try:
-#         with open(LOG_PATH, "a", encoding="utf-8") as f:
-#             f.write(json.dumps({"sessionId": session_id, "runId": run_id, "hypothesisId": hypothesis_id, "location": location, "message": message, "data": data, "timestamp": time.time() * 1000}) + "\n")
-#     except: pass
-# # #endregion
-
-async def send_messages(websocket, user_name, state):
+async def send_messages(websocket, user_name, state, stop_event):
     await websocket.send(json.dumps({
         "action": "join",
         "user": user_name
@@ -41,9 +32,11 @@ async def send_messages(websocket, user_name, state):
     await asyncio.sleep(0.1)
     # Read keystrokes continuously from the subprocess
     try:
-        while True:
+        while not stop_event.is_set():
             try:
-                line = await proc.stdout.readline()
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
             except Exception as e:
                 print(f"Error reading from subprocess: {e}")
                 break
@@ -52,13 +45,6 @@ async def send_messages(websocket, user_name, state):
                 break
             
             line = line.decode().rstrip('\n')
-
-            # if line.startswith("SPACE"):
-            #     if current_message:
-            #         current_message.append("-")
-            #         state["buffer"] = "".join(current_message)
-            #         state["typing"] = True
-            #         print(" ", end="", flush=True)
             
             if line.startswith("KEY:"):
                 # Regular key pressed - add to message buffer
@@ -84,8 +70,8 @@ async def send_messages(websocket, user_name, state):
                 # Enter pressed - send the complete message
                 print()  # New line after Enter
                 message_text = "".join(current_message)
-                print("current_message --> ", current_message)
-                print("message_text -->", message_text.split())
+                # print("current_message --> ", current_message)
+                # print("message_text -->", message_text.split())
                 if message_text == "/exit":
                     await websocket.send(json.dumps({
                         "action": "exit",
@@ -134,8 +120,6 @@ async def send_messages(websocket, user_name, state):
                     print("\b \b", end="", flush=True)
                     
             elif line == "EXIT":
-                # Ctrl+C or EOF detected - exit
-                
                 break
     finally:
         if proc.returncode is None:
@@ -145,7 +129,7 @@ async def send_messages(websocket, user_name, state):
             except Exception:
                 pass
 
-async def receive_messages(websocket, user_name, state):
+async def receive_messages(websocket, user_name, state, stop_event):
     async for raw_message in websocket:
         data = json.loads(raw_message)
         action = data.get("action")
@@ -163,39 +147,22 @@ async def receive_messages(websocket, user_name, state):
             sender = data.get("user")
             text = data.get("text")
             message_type = data.get("message_type")
-            # print("MESSAGE TYPE -> ", message_type)
-            # try:
-            print("INSIDE MESSAGE")
             if message_type == "duplicate_user_error":
                 print(f"User {sender} already exists!")
-                await websocket.send(json.dumps({
-                    "action": "exit",
-                    "user": sender,
-                    "text": text
-                }))
-                raise SystemExit(1)
-            # except SystemExit:
-            #     print("Please launch client again!")s
+                stop_event.set()
+                return
             elif message_type == "direct_message" and data.get("receiver") == user_name:
                 print(f"\r\033[K[DM] [{sender}]: {text}")
+                current_text = state.get("buffer", "")
+                print(f"[{user_name}]: {current_text}", end="", flush=True)
 
-            if sender != user_name:
+            elif sender != user_name:
                 print(f"\r\033[K[{sender}]: {text}")
                 current_text = state.get("buffer", "")
                 print(f"[{user_name}]: {current_text}", end="", flush=True)
         
         elif action == "join":
             sender = data.get("user")
-            # print()
-            # message_type = data.get("message_type")
-            # if message_type == "duplicate_user_error":
-            #     message_text = f"\r\033[K[ User {sender} already exists! ]"
-            #     await websocket.send(json.dumps({
-            #         "action": "message",
-            #         "user": sender,
-            #         "text": message_text,
-            #         "message_type": "duplicate_user_error"
-            #     }))
 
             message_text = f"\r\033[K[ User {sender} joined! ]"
             await websocket.send(json.dumps({
@@ -219,25 +186,35 @@ async def receive_messages(websocket, user_name, state):
             users_list = data.get("users_list")
             print(users_list)
 
-        elif action == "direct_message":
-            sender = data.get("user")
-            receiver = data.get("receiver")
-            message = data.get("message")
-            if receiver == user_name:
-                print(f"\r\033[K[{sender}]: [DM] {message}")
+        # elif action == "direct_message":
+        #     sender = data.get("user")
+        #     receiver = data.get("receiver")
+        #     message = data.get("message")
+        #     if receiver == user_name:
+        #         print(f"\r\033[K[{sender}]: [DM] {message}")
 
 
 async def main():
-    user_name = input("Enter your name: ")
+    admin_flag = len(sys.argv) > 1 and sys.argv[1] == "--admin"
+    if admin_flag:
+        admin_username = input("Enter admin username: ")
+        admin_password = input("Enter admin password: ")
+        if admin_username == "admin" and admin_password == "admin":
+            print("Admin mode enabled")
+        else:
+            print("Invalid admin credentials")
+            sys.exit(1) 
+    user_name = admin_username if admin_flag else input("Enter your name: ")
     state = {"buffer": "", "typing": False} # Global state to track the current message and typing status
 
     # One connection that stays open
     # server_host = input("Server address (or press Enter for localhost): ").strip() or "localhost"
     # async with connect(f"ws://{server_host}:8765") as websocket:
     async with connect("ws://localhost:8765") as websocket:
+        stop_event = asyncio.Event()
         await asyncio.gather(
-            send_messages(websocket, user_name, state),
-            receive_messages(websocket, user_name, state)
+            send_messages(websocket, user_name, state, stop_event),
+            receive_messages(websocket, user_name, state, stop_event)
         )
 
 if __name__ == "__main__":

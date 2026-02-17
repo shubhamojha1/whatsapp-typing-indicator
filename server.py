@@ -1,14 +1,13 @@
-"""Echo server using the asyncio API."""
-
 import asyncio
 from websockets.asyncio.server import serve
-import websockets
 import logging
 import json
 
 logging.basicConfig(level=logging.INFO)
 
 users = {}
+
+
 async def handle_typing(websocket, data):
     user = data.get("user")
     logging.info(f"{user} is typing...")
@@ -22,7 +21,7 @@ async def handle_typing(websocket, data):
 
 async def handle_join(websocket, data):
     user = data.get("user")
-    if user in list(users.keys()):
+    if user in users:
         logging.info(f"User {user} already exists!")
         await websocket.send(json.dumps({
             "action": "message",
@@ -33,7 +32,7 @@ async def handle_join(websocket, data):
 
     users[user] = websocket
     logging.info(f"User {user} joined")
-    logging.info(users)
+    # logging.info(users)
     await websocket.send(json.dumps({
         "action": "join",
         "user": user,
@@ -44,10 +43,10 @@ async def handle_message(websocket, data):
     sender = data.get("user")
     logging.info(f"Message received: {text}")
     message_type = data.get("message_type")
-    if message_type == "regular" or message_type == "joining" or message_type == "exit":
-        for user, websocket in users.items():
+    if message_type in ["regular", "joining", "exit"]:
+        for user, ws in users.items():
                 if user != sender:
-                    await websocket.send(json.dumps({
+                    await ws.send(json.dumps({
                         "action": "message",
                         "text": text,
                         "user": sender,
@@ -63,18 +62,20 @@ async def handle_message(websocket, data):
 
 async def handle_exit(websocket, data):
     user = data.get("user")
-    del users[user]
+    # del users[user]
+    users.pop(user, None)
     logging.info(f"{user} exited.")
-    logging.info(users)
+    # logging.info(users)
     await websocket.send(json.dumps({
         "action": "exit",
         "user": user,
     }))
-    await websocket.close(code=1000, reason = "Client Exit")
+    await websocket.close(code=1000, reason="Client Exit")
 
 async def handle_list_users(websocket, data):
     sender = data.get("user")
-    users_list = [key for key, _ in users.items() if key != sender]
+    # users_list = [key for key, _ in users.items() if key != sender]
+    users_list = [u for u in users if u!=sender]
     await websocket.send(json.dumps({
         "action": "list_users",
         "users_list": users_list,
@@ -110,7 +111,6 @@ ROUTES = {
     "exit": handle_exit,
     "list_users": handle_list_users,
     "direct_message": handle_direct_message
-    # "send_message_to_others": handle_send_message_to_others,
 }
 
 async def handler(websocket):
