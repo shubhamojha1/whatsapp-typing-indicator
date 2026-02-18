@@ -2,11 +2,11 @@ import asyncio
 from websockets.asyncio.server import serve
 import logging
 import json
+import server.handlers.messaging
 
 logging.basicConfig(level=logging.INFO)
 
 users = {}
-
 
 async def handle_typing(websocket, data):
     user = data.get("user")
@@ -18,25 +18,6 @@ async def handle_typing(websocket, data):
                 "action": "typing",
                 "user": user
             }))
-
-async def handle_join(websocket, data):
-    user = data.get("user")
-    if user in users:
-        logging.info(f"User {user} already exists!")
-        await websocket.send(json.dumps({
-            "action": "message",
-            "user": user,
-            "message_type": "duplicate_user_error"
-        }))
-        return
-
-    users[user] = websocket
-    logging.info(f"User {user} joined")
-    # logging.info(users)
-    await websocket.send(json.dumps({
-        "action": "join",
-        "user": user,
-    }))
 
 async def handle_message(websocket, data):
     text = data.get("text")
@@ -103,32 +84,14 @@ async def handle_direct_message(websocket, data):
             "message_type": "regular"
         }))
 
+from server.router import handler
 
-ROUTES = {
-    "join": handle_join,
-    "message": handle_message,
-    "typing": handle_typing,
-    "exit": handle_exit,
-    "list_users": handle_list_users,
-    "direct_message": handle_direct_message
-}
+async def websocket_handler(websocket):
+    await handler(websocket, users)
 
-async def handler(websocket):
-    async for raw_message in websocket:
-        try:
-            data = json.loads(raw_message)
-            action = data.get("action")
-            
-            if action in ROUTES:
-                await ROUTES[action](websocket, data)
-            else:
-                await websocket.send(json.dumps({"error": f"Unknown action: {action}"}))
-        except json.JSONDecodeError:
-            await websocket.send(json.dumps({"error": "Invalid JSON"}))
-            
 async def main():
     # async with serve(handler, "0.0.0.0", 8765) as server: # listen on all interfaces
-    async with serve(handler, "localhost", 8765) as server:
+    async with serve(websocket_handler, "localhost", 8765) as server:
         await server.serve_forever()
 
 
