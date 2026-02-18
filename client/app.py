@@ -6,6 +6,7 @@ import json
 import sys
 # import subprocess
 import time
+import pathlib
 # import os
 
 async def send_messages(websocket, user_name, state, stop_event):
@@ -14,7 +15,9 @@ async def send_messages(websocket, user_name, state, stop_event):
         "user": user_name
     }))
 
-    detector_path = "./keystroke_detector.exe" if sys.platform == "win32" else "./keystroke_detector"
+    project_root = pathlib.Path(__file__).parent.parent
+    detector_name = "keystroke_detector.exe" if sys.platform == "win32" else "keystroke_detector"
+    detector_path = str(project_root / detector_name)
     
     # Create keystroke detector subprocess once at the start
     proc = await asyncio.create_subprocess_exec(
