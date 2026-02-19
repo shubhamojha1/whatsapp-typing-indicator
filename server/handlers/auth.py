@@ -2,6 +2,7 @@ from server.router import route
 from server.models.user import User, UserRole
 
 from protocol.payloads import ServerJoinPayload
+from protocol.payloads import ServerDuplicateClientErrorPayload
 
 import logging
 import json
@@ -25,12 +26,9 @@ async def handle_join(websocket, data, users):
     if error:
     # if username in users:
         logging.info(f"User {username} already exists!")
-        await websocket.send(json.dumps({
-            "action": "message",
-            "username": username,
-            "message_type": "duplicate_user_error",
-            "user_id": user.user_id
-        })) 
+
+        server_duplicate_client_error_payload = ServerDuplicateClientErrorPayload(action="join", username=username, message_type="duplicate_user_error", user_id = u)
+        await websocket.send(server_duplicate_client_error_payload.model_dump_json()) 
         return
     
     user.websocket = websocket
