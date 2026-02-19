@@ -9,10 +9,11 @@ import time
 import pathlib
 # import os
 
-async def send_messages(websocket, user_name, state, stop_event):
+async def send_messages(websocket, user_name, state, stop_event, admin_flag):
     await websocket.send(json.dumps({
         "action": "join",
-        "user": user_name
+        "username": user_name,
+        "admin_flag": admin_flag
     }))
 
     project_root = pathlib.Path(__file__).parent.parent
@@ -65,7 +66,7 @@ async def send_messages(websocket, user_name, state, stop_event):
                 if current_time - last_typing_time > TYPING_DEBOUNCE_SECONDS:
                     await websocket.send(json.dumps({
                         "action": "typing",
-                        "user": user_name
+                        "username": user_name,
                     }))
                     last_typing_time = current_time
                 
@@ -78,14 +79,14 @@ async def send_messages(websocket, user_name, state, stop_event):
                 if message_text == "/exit":
                     await websocket.send(json.dumps({
                         "action": "exit",
-                        "user": user_name,
+                        "username": user_name,
                         "text": message_text
                     }))
                     break
                 elif message_text == "/users":
                     await websocket.send(json.dumps({
                         "action": "list_users",
-                        "user": user_name
+                        "username": user_name
                     }))
                 elif message_text.startswith("/dm "):
                     parts = message_text.split()
@@ -95,16 +96,17 @@ async def send_messages(websocket, user_name, state, stop_event):
                         print(f"dm to {receiver}: {message}")
                         await websocket.send(json.dumps({
                             "action": "direct_message",
-                            "user": user_name,
+                            "username": user_name,
                             "receiver": receiver,
-                            "message": message
+                            "message": message,
+                            "user_id": user_id
                         }))
                     else:
                         print("Usage: /dm @username message")
                 elif message_text:  # Only send non-empty messages
                     await websocket.send(json.dumps({
                         "action": "message",
-                        "user": user_name,
+                        "username": user_name,
                         "text": message_text,
                         "message_type": "regular"
                     }))
@@ -132,13 +134,13 @@ async def send_messages(websocket, user_name, state, stop_event):
             except Exception:
                 pass
 
-async def receive_messages(websocket, user_name, state, stop_event):
+async def receive_messages(websocket, user_name, state, stop_event, admin_flag):
     async for raw_message in websocket:
         data = json.loads(raw_message)
         action = data.get("action")
         
         if action == "typing":
-            sender = data.get("user")
+            sender = data.get("username")
             if sender != user_name:
                 # Display typing indicator (clear line, show typing, restore prompt)
                 print(f"\r\033[K{sender} is typing...", end="", flush=True)
@@ -147,11 +149,11 @@ async def receive_messages(websocket, user_name, state, stop_event):
                 print(f"\r\033[K[{user_name}]: {current_text}", end="", flush=True)
                 
         elif action == "message":
-            sender = data.get("user")
+            sender = data.get("username")
             text = data.get("text")
             message_type = data.get("message_type")
             if message_type == "duplicate_user_error":
-                print(f"User {sender} already exists!")
+                print(f"username {sender} already exists!")
                 stop_event.set()
                 return
             elif message_type == "direct_message" and data.get("receiver") == user_name:
@@ -165,22 +167,23 @@ async def receive_messages(websocket, user_name, state, stop_event):
                 print(f"[{user_name}]: {current_text}", end="", flush=True)
         
         elif action == "join":
-            sender = data.get("user")
-
-            message_text = f"\r\033[K[ User {sender} joined! ]"
+            username = data.get("username")
+            user_id = data.get("user_id")
+            message_text = f"\r\033[K[ username {username} joined! ]"
             await websocket.send(json.dumps({
                         "action": "message",
-                        "user": user_name,
+                        "username": user_name,
                         "text": message_text,
-                        "message_type": "joining"
+                        "message_type": "joining",
+                        "user_id": user_id
                     }))
             
         elif action == "exit":
-            sender = data.get("user")
-            message_text = f"\r\033[K[ User {sender} left! ]"
+            sender = data.get("username")
+            message_text = f"\r\033[K[ username {sender} left! ]"
             await websocket.send(json.dumps({
                         "action": "message",
-                        "user": user_name,
+                        "username": user_name,
                         "text": message_text,
                         "message_type": "exit"
             }))
@@ -190,7 +193,7 @@ async def receive_messages(websocket, user_name, state, stop_event):
             print(users_list)
 
         # elif action == "direct_message":
-        #     sender = data.get("user")
+        #     sender = data.get("username")
         #     receiver = data.get("receiver")
         #     message = data.get("message")
         #     if receiver == user_name:
@@ -216,8 +219,8 @@ async def main():
     async with connect("ws://localhost:8765") as websocket:
         stop_event = asyncio.Event()
         await asyncio.gather(
-            send_messages(websocket, user_name, state, stop_event),
-            receive_messages(websocket, user_name, state, stop_event)
+            send_messages(websocket, user_name, state, stop_event, admin_flag),
+            receive_messages(websocket, user_name, state, stop_event, admin_flag)
         )
 
 if __name__ == "__main__":
