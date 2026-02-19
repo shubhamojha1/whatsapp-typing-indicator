@@ -9,12 +9,11 @@ import time
 import pathlib
 # import os
 
+from protocol.payloads import ClientJoinPayload
+
 async def send_messages(websocket, user_name, state, stop_event, admin_flag):
-    await websocket.send(json.dumps({
-        "action": "join",
-        "username": user_name,
-        "admin_flag": admin_flag
-    }))
+    client_join_payload = ClientJoinPayload(action="join", username=user_name, admin_flag=admin_flag)
+    await websocket.send(client_join_payload.model_dump_json())
 
     project_root = pathlib.Path(__file__).parent.parent
     detector_name = "keystroke_detector.exe" if sys.platform == "win32" else "keystroke_detector"
@@ -99,7 +98,7 @@ async def send_messages(websocket, user_name, state, stop_event, admin_flag):
                             "username": user_name,
                             "receiver": receiver,
                             "message": message,
-                            "user_id": user_id
+                            "user_id": user.user_id
                         }))
                     else:
                         print("Usage: /dm @username message")

@@ -1,5 +1,8 @@
 from server.router import route
 from server.models.user import User, UserRole
+
+from protocol.payloads import ServerJoinPayload
+
 import logging
 import json
 
@@ -25,17 +28,15 @@ async def handle_join(websocket, data, users):
         await websocket.send(json.dumps({
             "action": "message",
             "username": username,
-            "message_type": "duplicate_user_error"
+            "message_type": "duplicate_user_error",
+            "user_id": user.user_id
         })) 
         return
     
     user.websocket = websocket
     logging.info(f"User {username} joined")
-    await websocket.send(json.dumps({
-        "action": "join",
-        "username": username,
-        "user_id": user.user_id
-    }))
+    server_join_payload = ServerJoinPayload(action="join", username=username, user_id=user.user_id)
+    await websocket.send(server_join_payload.model_dump_json())
 
 @route("exit")
 async def handle_exit(websocket, data, users):
