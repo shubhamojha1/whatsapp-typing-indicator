@@ -8,14 +8,14 @@ def route(action_name):
         return func
     return decorator
 
-async def handler(websocket, users):
+async def handler(websocket, users, rooms):
     async for raw_message in websocket:
         try:
             data = json.loads(raw_message)
             action = data.get("action")
             
             if action in ROUTES:
-                await ROUTES[action](websocket, data, users)
+                await ROUTES[action](websocket, data, users, rooms)
             else:
                 await websocket.send(json.dumps({"error": f"Unknown action: {action}"}))
         except json.JSONDecodeError:

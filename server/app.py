@@ -8,6 +8,7 @@ from server.router import handler
 import server.handlers.messaging
 import server.handlers.auth
 import server.handlers.typing
+import server.handlers.rooms
 
 logging.basicConfig(level=logging.INFO)
 
@@ -16,12 +17,16 @@ logging.basicConfig(level=logging.INFO)
 def create_users_store():
     return {}
 
-async def websocket_handler(websocket, users):
-    await handler(websocket, users)
+def create_rooms_store():
+    return {}
+
+async def websocket_handler(websocket, users, rooms):
+    await handler(websocket, users, rooms)
 
 async def create_server(host="localhost", port=8765):
     users = create_users_store()
-    return await serve(lambda ws: websocket_handler(ws, users), host, port)
+    rooms = create_rooms_store()
+    return await serve(lambda ws: websocket_handler(ws, users, rooms), host, port)
 
 async def main():
     # async with serve(handler, "0.0.0.0", 8765) as server: # listen on all interfaces

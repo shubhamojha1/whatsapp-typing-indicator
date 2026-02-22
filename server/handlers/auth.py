@@ -19,15 +19,14 @@ def register_user(users, username, is_admin=False):
     return user, None
 
 @route("join")
-async def handle_join(websocket, data, users):
+async def handle_join(websocket, data, users, rooms):
     username = data.get("username")
     is_admin = data.get("admin_flag")
     user, error = register_user(users, username, is_admin)
     if error:
     # if username in users:
         logging.info(f"User {username} already exists!")
-
-        server_duplicate_client_error_payload = ServerDuplicateClientErrorPayload(action="join", username=username, message_type="duplicate_user_error", user_id = u)
+        server_duplicate_client_error_payload = ServerDuplicateClientErrorPayload(action="join", username=username, message_type="duplicate_user_error", user_id = None)
         await websocket.send(server_duplicate_client_error_payload.model_dump_json()) 
         return
     
@@ -37,7 +36,7 @@ async def handle_join(websocket, data, users):
     await websocket.send(server_join_payload.model_dump_json())
 
 @route("exit")
-async def handle_exit(websocket, data, users):
+async def handle_exit(websocket, data, users, rooms):
     username = data.get("username")
     users.pop(username, None)
     logging.info(f"{username} exited.")
