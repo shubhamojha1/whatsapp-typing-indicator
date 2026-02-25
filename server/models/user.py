@@ -33,7 +33,7 @@ class User:
         # self.created_at = datetime.utcnow()
         # self.last_seen = datetime.utcnow()
         self.is_online = True
-        # self.current_room: Optional[str] = None
+        self.current_room: Optional[str] = None  # Track which room user is viewing
         # self.unread_messages: List[Message] = []
         self.websocket = websocket
         self.settings: Dict[str, Any] = {
